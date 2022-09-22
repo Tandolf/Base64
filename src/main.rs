@@ -29,10 +29,10 @@ impl Base64 {
     fn encode<T: AsRef<str>>(input: T) -> String {
         let mut input = input.as_ref().to_string();
         if input.is_empty() {
-            return String::from("");
+            return String::new();
         }
 
-        let mut padding: String = String::from("");
+        let mut padding: String = String::new();
 
         let input_length = input.chars().count() % 3;
         if input_length > 0 {
@@ -43,9 +43,9 @@ impl Base64 {
         }
 
         let value_bytes = input.as_bytes();
-        let value_iter = input.chars().into_iter().enumerate().step_by(3);
+        let value_iter = input.chars().enumerate().step_by(3);
 
-        let mut result: String = String::from("");
+        let mut result: String = String::new();
 
         for (i, _) in value_iter {
             if i > 0 && (i / 3 * 4) % 76 == 0 {
@@ -58,10 +58,10 @@ impl Base64 {
             let n: u32 =
                 ((char_number as u32) << 16) + ((char_number1 as u32) << 8) + (char_number2 as u32);
 
-            let n1 = (n >> 18) & 63;
-            let n2 = (n >> 12) & 63;
-            let n3 = (n >> 6) & 63;
-            let n4 = n & 63;
+            let n1 = (n >> 18) & 0x3F;
+            let n2 = (n >> 12) & 0x3F;
+            let n3 = (n >> 6) & 0x3F;
+            let n4 = n & 0x3F;
 
             let c1 = BASE64_CHARS[n1 as usize];
             let c2 = BASE64_CHARS[n2 as usize];
@@ -94,9 +94,56 @@ impl Base64 {
         regex.push_str(&base64_chars);
         regex.push_str("=]");
         let regex = Regex::new(&regex).unwrap();
-        let input = regex.replace_all(&input, "").to_string();
+        let input = regex.replace_all(&input, "");
 
-        Ok(input)
+        let suffix = if input.ends_with("==") {
+            "AA"
+        } else if input.ends_with('=') {
+            "A"
+        } else {
+            ""
+        };
+
+        let mut input = input[..input.len() - suffix.len()].to_string();
+        input.push_str(suffix);
+
+        let value_bytes = input.as_bytes();
+        let mut bytes = Vec::new();
+
+        let input_iter = input.chars().enumerate().step_by(4);
+
+        for (i, _) in input_iter {
+            let v = Base64::index_of(value_bytes[i]);
+            let v1 = Base64::index_of(value_bytes[i + 1]);
+            let v2 = Base64::index_of(value_bytes[i + 2]);
+            let v3 = Base64::index_of(value_bytes[i + 3]);
+
+            let n: u32 =
+                ((v as u32) << 18) + ((v1 as u32) << 12) + ((v2 as u32) << 6) + (v3 as u32);
+
+            let c = n >> 16 & 0xFF;
+            let c1 = n >> 8 & 0xFF;
+            let c2 = n & 0xFF;
+
+            bytes.push(c as u8);
+            bytes.push(c1 as u8);
+            bytes.push(c2 as u8);
+        }
+
+        for _ in 0..suffix.len() {
+            bytes.pop();
+        }
+
+        let output = String::from_utf8(bytes).unwrap();
+
+        Ok(output)
+    }
+
+    fn index_of(input: u8) -> usize {
+        BASE64_CHARS
+            .iter()
+            .position(|c| c == &(input as char))
+            .unwrap()
     }
 }
 
@@ -104,10 +151,15 @@ fn main() {
     let args: Vec<String> = env::args().collect();
 
     let input = &args[1];
-    let encoded_value = Base64::encode(input);
-    let decoded_result = Base64::decode(encoded_value);
 
-    match decoded_result {
+    let result = if input == "--decode" {
+        let input = &args[2];
+        Base64::decode(input)
+    } else {
+        Ok(Base64::encode(input))
+    };
+
+    match result {
         Ok(r) => println!("{}", r),
         Err(e) => println!("{}", e),
     }
@@ -173,7 +225,19 @@ mod tests {
 
     #[test]
     fn test_regexp() {
-        let result = Base64::decode("Zm{}==").unwrap();
-        assert_eq!("foobar1234", result);
+        let result = Base64::decode("Zg{}[]==").unwrap();
+        assert_eq!("f", result);
+    }
+
+    #[test]
+    fn test_decode_f() {
+        let value = Base64::decode("Zg==").unwrap();
+        assert_eq!("f", value);
+    }
+
+    #[test]
+    fn test_decode_foo() {
+        let value = Base64::decode("Zm9v").unwrap();
+        assert_eq!("foo", value);
     }
 }

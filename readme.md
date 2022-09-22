@@ -3,8 +3,8 @@ This repository contains a base64 implementation written in rust.
 
 ## Todo: 
 - [x] encoding
-- [ ] decoding
-- [ ] decoding flag (-d, --decode)
+- [x] decoding
+- [x] decoding flag (-d, --decode)
 - [x] ignore garbage
 - [ ] fail on garbage input
 - [ ] ignore garbage flag (-i, --ignore-garbage)
