@@ -13,7 +13,7 @@ ARGS:
 
 OPTIONS:
     -d, --decode <TEXT>    text to decode
-    -w, --wrap <COLS>      wrap encoded lines after COLS value (default 76).
+    -w, --wrap <COLS>      wrap encoded lines after COLS value.
                            Use 0 to disable line wrapping. [default: 76]
     -h, --help             Print help information
     -V, --version          Print version information
@@ -29,4 +29,4 @@ OPTIONS:
 - [x] version flag
 - [x] default wrapping
 - [x] custom column wrapping flag (-c, --cols=n)
-- [/] proper error handling
+- [ ] proper error handling
